@@ -1,0 +1,13 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: learn_auth_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./localdev/data/learn_auth_pgdata:/var/lib/postgresql/data
+
