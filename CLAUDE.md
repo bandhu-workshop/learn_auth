@@ -23,5 +23,5 @@ Expert Python backend dev. Clean, minimal, simple over clever.
 4. **Refactor** — simplify without breaking tests. Stop when the code is obvious.
 
 ## Scratch & Validation
-- Use `python -c "..."` only for trivial, single-line checks.
+- Use `python -c "..."` only for trivial, single-line checks. e.g. `python -c "import secrets; print(secrets.token_hex(32))"`
 - For anything larger (DB queries, multi-step validation, data inspection) write a file under `localdev/temp/<descriptive_name>.py`, run it, then delete it when done.
