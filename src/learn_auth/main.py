@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from learn_auth.app.api.v1.routers import router
 from learn_auth.app.core.config import settings
-from learn_auth.app.core.database import init_db, seed_db
+from learn_auth.app.core.database import init_db
 
 
 @asynccontextmanager
@@ -14,11 +14,6 @@ async def lifespan(app: FastAPI):
     # init database (create tables)
     if not settings.SKIP_DB_INIT:  # add a setting to skip db init if needed
         init_db()
-
-    # seed database with initial data (development/learning only)
-    # Set SEED_DB=true in .env or os.environ to enable seeding
-    if settings.DEBUG:  # or add a SEED_DB setting
-        seed_db()
 
     yield
     # Shutdown code here

@@ -35,33 +35,3 @@ def init_db():
 
     Base.metadata.create_all(bind=engine)
     print("✅ Database tables initialized")
-
-
-# seed_db() - ONLY loads data
-def seed_db():
-    import json
-    from pathlib import Path
-
-    from learn_auth.app.models.todos import Todo  # noqa: F401
-
-    session = SessionLocal()
-    try:
-        if session.query(Todo).count() == 0:
-            seed_file = (
-                Path(__file__).parent.parent.parent.parent.parent
-                / "localdev"
-                / "data"
-                / "seed_data.json"
-            )
-            if seed_file.exists():
-                with open(seed_file, "r") as f:
-                    todos_data = json.load(f)
-
-                for todo_data in todos_data:
-                    todo = Todo(**todo_data)
-                    session.add(todo)
-
-                session.commit()
-                print(f"✅ Loaded {len(todos_data)} todos")
-    finally:
-        session.close()
