@@ -626,7 +626,7 @@ src/learn_auth/
     │   ├── config.py              ← Settings + JWT config
     │   ├── database.py            ← SQLAlchemy session + Base
     │   ├── deps.py                ← get_db, get_current_user, get_current_admin
-    │   ├── security.py            ← bcrypt + JWT functions
+    │   ├── security.py            ← Argon2 (pwdlib) + JWT functions
     │   └── email.py               ← email sending utility
     ├── models/
     │   ├── auth.py                ← User, RefreshToken, EmailVerification, PasswordReset

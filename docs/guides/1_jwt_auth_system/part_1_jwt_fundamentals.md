@@ -306,7 +306,7 @@ This is covered in depth in Part 8.
 **Solution:**
 - Rate limit login attempts per IP
 - After N consecutive failures, lock the account for a time window
-- Use bcrypt (already in your `security.py`) — it is intentionally slow (~100ms per hash)
+- Use Argon2 via pwdlib (already in your `security.py`) — it is intentionally slow and memory-hard
 
 ### Risk 6: Email Enumeration
 
@@ -415,7 +415,7 @@ Before starting implementation, internalize these:
 - [ ] **HTTPS only** in production
 - [ ] **Rotate refresh tokens** — new token on every refresh
 - [ ] **Revoke entire family** if token reuse is detected
-- [ ] **bcrypt** for password hashing (already done in `security.py`)
+- [ ] **Argon2 via `pwdlib`** for password hashing (already done in `security.py`)
 - [ ] **Brute-force lockout** — track failed attempts, lock after N failures
 - [ ] **Password strength validation** — minimum length, complexity
 - [ ] **Soft-delete accounts** — don't destroy data immediately

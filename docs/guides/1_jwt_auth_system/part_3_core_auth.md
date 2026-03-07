@@ -21,6 +21,7 @@ uv add python-jose[cryptography] python-multipart
 
 - `python-jose` — JWT encode/decode (battle-tested, supports HS256, RS256)
 - `python-multipart` — required for FastAPI's OAuth2PasswordRequestForm (form data)
+- `pwdlib[argon2]` — password hashing (already in `pyproject.toml`)
 
 ---
 
@@ -36,23 +37,35 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+from pwdlib import PasswordHash
 
 from learn_auth.app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Argon2id via pwdlib — the FastAPI-recommended password hasher.
+# passlib is unmaintained and breaks on Python 3.13+.
+password_hash = PasswordHash.recommended()
+
+# Pre-computed dummy used for timing-safe login (see _DUMMY_HASH in security.py).
+_DUMMY_HASH: str = password_hash.hash("__timing_dummy__")
 
 
 # ---------------------------------------------------------------------------
-# Password helpers (already existed)
+# Password helpers
 # ---------------------------------------------------------------------------
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    return password_hash.verify(plain_password, hashed_password)
+
+
+def verify_and_update_password(
+    plain_password: str, hashed_password: str
+) -> tuple[bool, str | None]:
+    """Verify + transparently rehash if Argon2 parameters changed."""
+    return password_hash.verify_and_update(plain_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    return password_hash.hash(password)
 
 
 # ---------------------------------------------------------------------------
@@ -218,6 +231,7 @@ from sqlalchemy.orm import Session
 
 from learn_auth.app.core.config import settings
 from learn_auth.app.core.security import (
+    _DUMMY_HASH,
     create_access_token,
     create_refresh_token,
     decode_refresh_token,
@@ -284,11 +298,11 @@ def login_user(
     # --- Lookup user ---
     user = db.query(User).filter(User.email == email).first()
 
-    # --- Timing-safe: always verify a password even if user is None ---
+    # --- Timing-safe: always run Argon2 even if user is None ---
     # Without this, a missing user returns instantly (timing leak).
-    dummy_hash = "$2b$12$AAAAAAAAAAAAAAAAAAAAAA.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"  # noqa: S105
-    password_to_verify = user.hashed_password if user else dummy_hash
-    password_ok = verify_password(password, password_to_verify)
+    # _DUMMY_HASH is a pre-computed valid Argon2 hash from security.py.
+    hash_to_verify = user.hashed_password if user else _DUMMY_HASH
+    password_ok = verify_password(password, hash_to_verify)
 
     # --- Brute force check (before lock to avoid timing difference) ---
     if user and user.is_locked:

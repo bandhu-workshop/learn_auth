@@ -110,32 +110,34 @@ POST /login {"email": "alice@example.com", "password": "test"}    → response i
 
 This is **email enumeration via timing side-channel**.
 
-### Our Fix: Always Run bcrypt
+### Our Fix: Always Run Argon2
 
 ```python
+from learn_auth.app.core.security import _DUMMY_HASH, verify_password
+
 def login_user(db, email, password, ...):
     user = db.query(User).filter(User.email == email).first()
 
-    # ALWAYS run bcrypt — even when user is None
-    # This makes the timing identical whether the email exists or not
-    dummy_hash = "$2b$12$AAAAAAAAAAAAAAAAAAAAAA.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-    hash_to_verify = user.hashed_password if user else dummy_hash
+    # ALWAYS run Argon2 — even when user is None.
+    # _DUMMY_HASH is a pre-computed valid Argon2 hash, generated once at
+    # module load time in security.py. verify() on it takes the same time
+    # as verifying a real hash, so timing is identical regardless of whether
+    # the email exists in the DB or not.
+    hash_to_verify = user.hashed_password if user else _DUMMY_HASH
     password_ok = verify_password(password, hash_to_verify)
 
     if not user or not password_ok:
         raise HTTPException(401, "Invalid credentials")
 ```
 
-The bcrypt `verify_password` call always takes ~100ms regardless. An attacker measuring response times gets no useful signal.
+The Argon2 `verify_password` call always completes in constant time. An attacker measuring response times gets no useful signal.
 
-**The dummy hash must be a valid bcrypt hash string.** If you use an empty string `""`, bcrypt will fail instantly without doing work, defeating the purpose. Generate a valid dummy once:
+**Why `_DUMMY_HASH` instead of an empty string?** If you pass `""` as the hash, pwdlib raises `UnknownHashError` immediately — no Argon2 work happens, the function returns instantly, and the timing difference becomes measurable again. `_DUMMY_HASH` is a real Argon2 hash, so the full hashing work runs every time.
 
 ```python
-from passlib.context import CryptContext
-ctx = CryptContext(schemes=["bcrypt"])
-print(ctx.hash("dummy"))
-# → $2b$12$AAAAAAAAAAAAAAAAAAAAAA.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-# Use this as your dummy_hash constant
+# In security.py — generated once at module load, reused forever:
+password_hash = PasswordHash.recommended()
+_DUMMY_HASH: str = password_hash.hash("__timing_dummy__")
 ```
 
 ---
@@ -354,6 +356,8 @@ def validate_password_strength(password: str) -> None:
 
 ### Verify Brute Force Lockout
 
+> Note: Argon2 is intentionally slow and memory-hard (by design). Each failed login attempt will take noticeable time — this is the protection, not a bug.
+
 ```bash
 # Try 5 wrong passwords in a row
 for i in $(seq 1 6); do
@@ -372,13 +376,13 @@ done
 time curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -d '{"email": "nobody@nowhere.com", "password": "test"}' \
   -H "Content-Type: application/json"
-# Should take ~100ms (bcrypt running on dummy hash)
+# Should take the same time as a real user (Argon2 running on _DUMMY_HASH)
 
 time curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -d '{"email": "alice@example.com", "password": "wrongpass"}' \
   -H "Content-Type: application/json"
-# Should also take ~100ms (bcrypt running on real hash)
-# Times should be similar — no detectable difference
+# Should take the same time — Argon2 running on the real hash
+# Times should be indistinguishable
 ```
 
 ### Verify Token Rotation

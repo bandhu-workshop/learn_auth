@@ -63,7 +63,7 @@ Refresh Token: long-lived (7 days), stored in DB (hashed), sent as HttpOnly cook
 Token Rotation: every refresh → revoke old token, issue new one
 Family Revocation: token reuse detected → revoke all tokens in login chain
 IDOR Protection: always scope DB queries to current_user.id
-Timing Safety: always run bcrypt even when user not found (prevent email enumeration)
+Timing Safety: always run Argon2 even when user not found (prevent email enumeration via _DUMMY_HASH)
 Soft Delete: never DELETE users, set deleted_at = now() instead
 ```
 

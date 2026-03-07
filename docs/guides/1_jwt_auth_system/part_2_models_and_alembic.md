@@ -187,7 +187,7 @@ class User(Base):
 
 **`email`** — the primary identifier. `unique=True` enforces no duplicates at the DB level (belt-and-suspenders alongside your Python validation). `index=True` speeds up the `WHERE email = ?` query on login.
 
-**`hashed_password`** — never store plaintext passwords. Bcrypt hash is ~60 characters; 255 gives you room.
+**`hashed_password`** — never store plaintext passwords. Argon2 hashes are ~97 characters; 255 gives you plenty of room.
 
 **`is_active`** — admin can deactivate an account without deleting it. Deactivated users cannot log in.
 
