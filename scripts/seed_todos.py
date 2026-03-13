@@ -18,7 +18,9 @@ DEFAULT_BASE_URL = "http://localhost:8080"
 
 
 def main() -> None:
-    base_url = (sys.argv[1].rstrip("/") if len(sys.argv) > 1 else DEFAULT_BASE_URL) + "/api/v1/todos/"
+    base_url = (
+        sys.argv[1].rstrip("/") if len(sys.argv) > 1 else DEFAULT_BASE_URL
+    ) + "/api/v1/todos/"
     todos = json.loads(SEED_FILE.read_text())
 
     with httpx.Client(base_url=base_url) as client:
